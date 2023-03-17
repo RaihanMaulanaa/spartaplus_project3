@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no"
+    />
+    <!-- tag meta og -->
+    <meta property="og:title" content="Restaurant Listing" />
+    <meta
+      property="og:description"
+      content="A list  of wonderful restaurants"
+    />
+    <meta
+      property="og:image"
+      content="{{url_for('static', filename='banner.jpg')}}"
+    />
+
+    <link
+      rel="shortcut icon"
+      href="{{url_for('static', filename='logo_red.ico')}}"
+      type="image/x-icon"
+    />
+    <link
+      rel="icon"
+      href="{{url_for('static', filename='logo_red.ico')}}"
+      type="image/x-icon"
+    />
+
+    <title>Showing the map</title>
+    <!-- link font -->
+    <link rel="preconnect" href="https://fonts.gstatic.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Jua&amp;display=swap"
+      rel="stylesheet"
+    />
+    <!-- link css -->
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3"
+      crossorigin="anonymous"
+    />
+    <!-- Mapbox library imports -->
+    <link
+      href="https://api.mapbox.com/mapbox-gl-js/v2.6.1/mapbox-gl.css"
+      rel="stylesheet"
+    />
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.6.1/mapbox-gl.js"></script>
+    <!-- link JQuery -->
+    <script src=" https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+
+    <script>
+      let map;
+      $(document).ready(function () {
+        mapboxgl.accessToken =
+          "pk.eyJ1IjoicmFpaGFuYWphYSIsImEiOiJjbGV3dWVhaWIwOG93M3Jud2NtdWdrNDhlIn0.z1Jfz9eix98VHxL8Dzzjxg";
+        map = new mapboxgl.Map({
+          container: "map", // container ID
+          center: [-122.420679, 37.772537], // starting position [lng, lat]
+          zoom: 13, // starting zoom
+          style: "mapbox://styles/mapbox/streets-v11", // style URL or style object
+          hash: true, // sync `center`, `zoom`, `pitch`, and `bearing` with URL
+          // Use `transformRequest` to modify requests that begin with `http://myHost`.
+          transformRequest: (url, resourceType) => {
+            if (resourceType === "Source" && url.startsWith("http://myHost")) {
+              return {
+                url: url.replace("http", "https"),
+                headers: { "my-custom-header": true },
+                credentials: "include", // Include cookies for cross-origin requests
+              };
+            }
+          },
+        });
+
+        const nav = new mapboxgl.NavigationControl({
+          visualizePitch: true,
+        });
+        map.addControl(nav, "bottom-right");
+
+        get_restaurants();
+
+        let initials = [
+          // ---------------------
+          [104.083333, -3.2333324],
+          [104.083333, -4.2333324],
+          [104.083333, -5.2333324],
+          [104.083333, -6.2333324],
+          [104.083333, -7.2333324],
+
+          [105.083333, -5.2333324],
+          [106.083333, -5.2333324],
+          [107.083333, -5.2333324],
+
+          [107.083333, -3.2333324],
+          [107.083333, -4.2333324],
+          [107.083333, -5.2333324],
+          [107.083333, -6.2333324],
+          [107.083333, -7.2333324],
+          // ---------------------
+
+          // ---------------------
+          [109.083333, -3.2333324],
+          [110.083333, -3.2333324],
+          [111.083333, -3.2333324],
+          [112.083333, -3.2333324],
+
+          [109.083333, -4.2333324],
+          [109.083333, -5.2333324],
+          [109.083333, -6.2333324],
+          [109.083333, -7.2333324],
+
+          [110.083333, -5.2333324],
+          [111.083333, -5.2333324],
+
+          [112.083333, -4.2333324],
+          [112.083333, -5.2333324],
+          [112.083333, -6.2333324],
+          [112.083333, -7.2333324],
+          // ---------------------
+
+          // ---------------------
+          [114.083333, -3.2333324],
+          [114.083333, -4.2333324],
+          [114.083333, -5.2333324],
+          [114.083333, -6.2333324],
+          [114.083333, -7.2333324],
+
+          [115.083333, -3.2333324],
+          [115.083333, -4.2333324],
+          [116.083333, -5.2333324],
+          [117.083333, -6.2333324],
+          [117.083333, -7.2333324],
+
+          [118.083333, -3.2333324],
+          [118.083333, -4.2333324],
+          [118.083333, -5.2333324],
+          [118.083333, -6.2333324],
+          [118.083333, -7.2333324],
+        ];
+
+        for (let i= 0; i<initials.length; i++) {
+          new mapboxgl.Marker({
+            color: 'pink',
+            Symbol: 'KR'
+          }).setLngLat(initials[i]).addTo(map);
+        }
+      });
+
+      function get_restaurants() {
+        $("#restaurant-box").empty();
+        $.ajax({
+          type: "GET",
+          url: "/restaurants",
+          data: {},
+          success: function (response) {
+            if (response.result === "success") {
+              let restaurants = response["restaurants"];
+              for (let i = 0; i < restaurants.length; i++) {
+                let restaurant = restaurants[i];
+                make_card(i, restaurant);
+                make_marker(restaurant);
+                add_info(i, restaurant);
+              }
+            } else {
+              alert("Something went wrong");
+            }
+          },
+        });
+      }
+
+      function make_card(i, restaurant) {
+        let html_temp = `
+          <div class="card" id="card-${i}" onclick="map.flyTo({center: [${restaurant.center}]}); scroll_to_card(${i});">
+            <div class="card-body">
+              <h5 class="card-title">
+                <a href="${restaurant.link}" class="restaurant-title">
+                  ${restaurant.name}
+                </a>
+              </h5>
+              <h6 class="card-subtitle mb-2 text-muted">
+                ${restaurant.categories}
+              </h6>
+              <p class="card-text">
+                ${restaurant.location}
+              </p>
+              <button class="btn btn-danger" onclick="delete_restaurant('${restaurant.name}')">Delete</button>
+            </div>
+          </div>
+        `;
+        $("#restaurant-box").append(html_temp);
+      }
+
+      function make_marker(restaurant) {
+        new mapboxgl.Marker().setLngLat(restaurant.center).addTo(map);
+      }
+
+      function add_info(i, restaurant) {
+        new mapboxgl.Popup({
+          offset: {
+            bottom: [0, -35],
+          },
+        })
+          .setLngLat(restaurant.center)
+          .setHTML(
+            `
+          <div class="iw-inner" onclick="map.flyTo({center: [${restaurant.center}]}); scroll_to_card(${i});">
+            <h5>${restaurant.name}</h5>
+            <p>${restaurant.location}</p>
+          </div> 
+        `
+          )
+          .setMaxWidth("300px")
+          .addTo(map);
+      }
+
+      function scroll_to_card(i) {
+        let box = $("#restaurant-box");
+        box.animate({
+          scrollTop: box.get(0).scrollTop + $(`#card-${i}`).position().top,
+        });
+      }
+
+      function delete_restaurant(name) {
+        $.ajax({
+          type: "POST",
+          url: "/restaurants/delete",
+          data: {
+            name: name,
+          },
+          success: function (response) {
+            if (response.result === "success") {
+              alert(response.msg);
+              window.location.reload();
+            } else {
+              alert("Something went wrong.");
+            }
+          },
+        });
+      }
+
+      function create_restaurant() {
+        let name = $("#input-name").val();
+        let categories = $("#input-categories").val();
+        let location = $("#input-location").val();
+
+        let longitude = $("#input-longitude").val();
+        let latitude = $("#input-latitude").val();
+
+        longitude = parseFloat(longitude);
+        latitude = parseFloat(latitude);
+
+        $.ajax({
+          type: "POST",
+          url: "/restaurants/create",
+          data: {
+            name: name,
+            categories: categories,
+            location: location,
+            longitude: longitude,
+            latitude: latitude,
+          },
+          success: function (response) {
+            if (response.result === "success") {
+              alert(response.msg);
+              window.location.reload();
+            } else {
+              alert("Something went wrong");
+            }
+          },
+        });
+      }
+    </script>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="banner">
+        <div
+          class="d-flex flex-column align-items-center"
+          style="
+            background-color: rgba(0, 0, 0, 0.5);
+            width: 100%;
+            height: 100%;
+          "
+        >
+          <h1 class="title mt-5 mb-2">Restaurant Map</h1>
+        </div>
+      </div>
+      <div id="map"></div>
+      <div class="restaurant-list" id="restaurant-box">
+        <div class="card" id="card-0">
+          <div class="card-body">
+            <h5 class="card-title">
+              <a href="#" class="restaurant-title">The Best Restaurant</a>
+            </h5>
+            <h6 class="card-subtitle mb-2 text-muted">Ramen</h6>
+            <p class="card-text">Address of the restaurant</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 32px">
+      <div class="card-body">
+        <div class="mb-3 input-name">
+          <label for="input-name" class="form-label">Name</label>
+          <input
+            type="text"
+            class="form-control"
+            id="input-name"
+            placeholder="input restaurant name"
+          />
+        </div>
+        <div class="mb-3 input-categories">
+          <label for="input-categories" class="form-label">Categories</label>
+          <input
+            type="text"
+            class="form-control"
+            id="input-categories"
+            placeholder="input restaurant categories"
+          />
+        </div>
+        <div class="mb-3 input-location">
+          <label for="input-location" class="form-label">location</label>
+          <input
+            type="text"
+            class="form-control"
+            id="input-location"
+            placeholder="input restaurant location"
+          />
+        </div>
+        <div class="mb-3 input-longitude">
+          <label for="input-longitude" class="form-label">Longitude</label>
+          <input
+            type="number"
+            class="form-control"
+            id="input-longitude"
+            placeholder="input restaurant longitude"
+          />
+        </div>
+        <div class="mb-3 input-latitude">
+          <label for="input-latitude" class="form-label">Latitude</label>
+          <input
+            type="number"
+            class="form-control"
+            id="input-latitude"
+            placeholder="input restaurant latitude"
+          />
+        </div>
+        <button type="button" class="btn btn-primary" onclick="create_restaurant()">Create</button>
+      </div>
+    </div>
+
+    <!-- Option 1: Bootstrap Bundle with Popper -->
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p"
+      crossorigin="anonymous"
+    ></script>
+  </body>
+</html>
